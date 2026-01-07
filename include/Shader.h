@@ -18,6 +18,8 @@ class Shader{
 
         void Use() { glUseProgram(program); }
         void Unuse() { glUseProgram(0); }
+
+        GLuint GetProgram() const { return program; }   
        
 };
 
