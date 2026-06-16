@@ -1,3 +1,6 @@
+//  mingw32-make
+//  ./app.exe
+
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 #include <glm/glm.hpp>
@@ -11,11 +14,15 @@
 #include "Object.h"
 #include "Camera.h"
 #include "Light.h"
+#include "ShadowMap.h"
 #include <iostream>
 #include <vector>
 
 SDL_Window* window;
 SDL_GLContext glContext;
+
+const int SCREEN_WIDTH  = 1080;
+const int SCREEN_HEIGHT = 800;
 
 void Initialize_Program()
 {
@@ -36,7 +43,7 @@ void Initialize_Program()
     window = SDL_CreateWindow(
         "SDL2 Test",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        1080, 800, SDL_WINDOW_OPENGL
+        SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL
     );
 
     if (!window) {
@@ -62,55 +69,59 @@ void Initialize_Program()
     
 }
 
-void Input(bool &quit, bool &w, bool &s, bool &a, bool &d)
+const float CAMERA_SPEED     = 0.05f;
+const float MOUSE_SENSITIVITY = 0.1f;  // degrees per pixel
+
+void Input(bool &quit, bool &w, bool &s, bool &a, bool &d,
+           bool &up, bool &down, float &mouseDX, float &mouseDY,
+           bool &mouseCapture)
 {
-    //handles the input of closing the window
-    SDL_Event e; 
-    while(SDL_PollEvent(&e)) 
+    mouseDX = 0.0f;
+    mouseDY = 0.0f;
+
+    SDL_Event e;
+    while(SDL_PollEvent(&e))
     {
-        if(e.type == SDL_QUIT) // If user closes the window
+        if(e.type == SDL_QUIT)
         {
-            std::cout << "Quit event received.\n";
             quit = true;
         }
 
-        if(e.type == SDL_KEYDOWN) 
+        // Left-click captures the mouse; Escape releases it
+        if(e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT)
         {
-            if(e.key.keysym.sym == SDLK_w)
-            {
-                w = true;
-            }
-            if(e.key.keysym.sym == SDLK_s)
-            {
-                s = true;
-            }
-            if(e.key.keysym.sym == SDLK_a)
-            {
-                a = true;
-            }
-            if(e.key.keysym.sym == SDLK_d)
-            {
-                d = true;
-            }
+            mouseCapture = true;
+            SDL_SetRelativeMouseMode(SDL_TRUE);
         }
-        if(e.type == SDL_KEYUP) 
+        if(e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)
         {
-            if(e.key.keysym.sym == SDLK_w)
-            {
-                w = false;
-            }
-            if(e.key.keysym.sym == SDLK_s)
-            {
-                s = false;
-            }
-            if(e.key.keysym.sym == SDLK_a)
-            {
-                a = false;
-            }
-            if(e.key.keysym.sym == SDLK_d)
-            {
-                d = false;
-            }
+            mouseCapture = false;
+            SDL_SetRelativeMouseMode(SDL_FALSE);
+        }
+
+        if(e.type == SDL_MOUSEMOTION && mouseCapture)
+        {
+            mouseDX += e.motion.xrel * MOUSE_SENSITIVITY;
+            mouseDY -= e.motion.yrel * MOUSE_SENSITIVITY; // invert Y: up = positive pitch
+        }
+
+        if(e.type == SDL_KEYDOWN)
+        {
+            if(e.key.keysym.sym == SDLK_w) w    = true;
+            if(e.key.keysym.sym == SDLK_s) s    = true;
+            if(e.key.keysym.sym == SDLK_a) a    = true;
+            if(e.key.keysym.sym == SDLK_d) d    = true;
+            if(e.key.keysym.sym == SDLK_q) up   = true;
+            if(e.key.keysym.sym == SDLK_e) down = true;
+        }
+        if(e.type == SDL_KEYUP)
+        {
+            if(e.key.keysym.sym == SDLK_w) w    = false;
+            if(e.key.keysym.sym == SDLK_s) s    = false;
+            if(e.key.keysym.sym == SDLK_a) a    = false;
+            if(e.key.keysym.sym == SDLK_d) d    = false;
+            if(e.key.keysym.sym == SDLK_q) up   = false;
+            if(e.key.keysym.sym == SDLK_e) down = false;
         }
     }
 }
@@ -131,12 +142,22 @@ void Main_Loop()
     
     Mesh Cube(vertices, indices);
     Transform transform;
-    transform.position = {0.0, 0.0, 5.0};
+    transform.position = {0.0, 0.0, 0.0};
+    transform.scale = {5.0f, 5.0f, 1.0f};
+
+    Mesh CubeSmall(vertices, indices);
+    Transform transformSmall;
+    transformSmall.position = {0.0, 0.0, 5.0};
+    transformSmall.scale = {1.0f, 1.0f, 1.0f};
     
     Shader shader("./shaders/Vertex.glsl", "./shaders/Fragment.glsl");
+    Shader depthShader("./shaders/Depth_Vert.glsl", "./shaders/Depth_Frag.glsl");
+
+    ShadowMap shadowMap;
+
     Camera camera(
-        glm::vec3(1.0f, 0.0f, 10.0f), //position
-        glm::vec3(-0.1f, 0.0f, -1.0f), //forward
+        glm::vec3(0.0f, 0.0f, 10.0f), //position
+        glm::vec3(0.0f, 0.0f, -1.0f), //forward
         glm::vec3(0.0f, 1.0f, 0.0f), //up
         75.0f, //fov
         1080.0f / 800.0f, //aspect ratio
@@ -144,62 +165,83 @@ void Main_Loop()
         100.0f //far plane
     );
     Light light(
-        glm::vec3(1.0f, 0.0f, 9.0f), //position
+        glm::vec3(1.0f, 0.0f, 15.0f), //position
         glm::vec3(1.0f, 1.0f, 1.0f), //color
         2.0f //intensity
     );
+
     Transform lightTrans;
     lightTrans.position = light.position;
     lightTrans.scale = {0.2f, 0.2f, 0.2f};
     Object lightObj(lightTrans, Cube, shader);
 
     Object cube(transform, Cube, shader);
+    Object cubeSmall(transformSmall, CubeSmall, shader);
 
     //Mesh Cube2(vertices, indices);
     //Transform transform2;
-    //transform2.position = {1.0, 5.0, -5.0};
+    //transform2.position = {1.0f, 0.0f, 9.0f};
+
     //Object cube2(transform2, Cube2, shader);
-    bool quit = 0;
-    bool w = 0;
-    bool s = 0;
-    bool a = 0;
-    bool d = 0;
+
+    bool quit  = false;
+    bool w     = false;
+    bool s     = false;
+    bool a     = false;
+    bool d     = false;
+    bool up    = false;
+    bool down  = false;
+    float mouseDX    = 0.0f;
+    float mouseDY    = 0.0f;
+    bool mouseCapture = false;
 
     while(!quit)
     {
-        Input(quit, w, s, a, d);
-        PreDraw();
-        
-        cube.Draw(camera, light);
-        //lightObj.Draw(camera, light);
-        
-        if(w)
-        {
-            cube.transform.rotation.x += 0.01f;
-        }
-        if(s)
-        {
-            cube.transform.rotation.x -= 0.01f;
-        }
-        if(a)
-        {
-            cube.transform.rotation.y -= 0.01f;
-        }
-        if(d)
-        {
-            cube.transform.rotation.y += 0.01f;
-        }
-        
-        
-        //GLuint modelLocation = glGetUniformLocation(shader.GetProgram(), "model");
-        //glm::mat4 model = transform.GetMatrix();
-        //glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+        Input(quit, w, s, a, d, up, down, mouseDX, mouseDY, mouseCapture);
 
-        //Cube.Draw();
-        //shader.Unuse();
-        
-        
-        SDL_GL_SwapWindow(window); //Swaps back buffer → front buffer (shows the frame).
+        // Camera look
+        if(mouseDX != 0.0f || mouseDY != 0.0f)
+            camera.Rotate(mouseDX, mouseDY);
+
+        // Camera movement
+        if(w)    camera.MoveForward( CAMERA_SPEED);
+        if(s)    camera.MoveForward(-CAMERA_SPEED);
+        if(a)    camera.MoveRight(  -CAMERA_SPEED);
+        if(d)    camera.MoveRight(   CAMERA_SPEED);
+        if(up)   camera.MoveUp(      CAMERA_SPEED);
+        if(down) camera.MoveUp(     -CAMERA_SPEED);
+
+        cubeSmall.transform.rotation.z += 0.01f;
+
+        //Shadow map stuff
+        glm::mat4 lightView = glm::lookAt(
+        light.position,           // light's position
+        glm::vec3(0.0f),          // looking at the origin (where your cube is)
+        glm::vec3(0.0f, 1.0f, 0.0f) // up vector
+        );
+
+        glm::mat4 lightProjection = glm::perspective(
+        glm::radians(90.0f),  // fov — wide enough to cover the scene
+        1.0f,                 // aspect ratio — 1:1 since shadow map is square
+        1.0f,                 // near plane
+        100.0f                // far plane, match your camera's
+        );  
+
+        glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+
+        shadowMap.Bind();
+        cube.DrawDepth(depthShader, lightSpaceMatrix);
+        cubeSmall.DrawDepth(depthShader, lightSpaceMatrix);
+        //cube2.DrawDepth(depthShader, lightSpaceMatrix);
+        shadowMap.Unbind(SCREEN_WIDTH, SCREEN_HEIGHT);
+
+        PreDraw();
+
+        cube.Draw(camera, light, shadowMap.GetTexture(), lightSpaceMatrix);
+        cubeSmall.Draw(camera, light, shadowMap.GetTexture(), lightSpaceMatrix);
+        //cube2.Draw(camera, light, shadowMap.GetTexture(), lightSpaceMatrix);
+
+        SDL_GL_SwapWindow(window);
     }
 }
 

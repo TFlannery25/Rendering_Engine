@@ -18,8 +18,8 @@ class Object
 
     Object(Transform &t, Mesh &m, Shader &s) : transform(t), mesh(m), shader(s) {}
 
-    void Draw(const Camera& camera, const Light& light);
-
+    void Draw(const Camera& camera, const Light& light, GLuint shadowMap, const glm::mat4& lightSpaceMatrix);
+    void DrawDepth(Shader& depthShader, const glm::mat4& lightSpaceMatrix);
 
 };
 

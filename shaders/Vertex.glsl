@@ -7,10 +7,12 @@ layout (location = 2) in vec3 aColor;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 perspective;
+uniform mat4 lightSpaceMatrix;
 
 out vec3 FragPos;
 out vec3 Normal;
 out vec3 vColor;
+out vec4 FragPosLightSpace;
 
 void main()
 {
@@ -19,6 +21,8 @@ void main()
 
     gl_Position = perspective * view * model * vec4(aPos, 1.0);
     vColor = aColor;
+
+    FragPosLightSpace = lightSpaceMatrix * vec4(FragPos, 1.0);
 }
 
 

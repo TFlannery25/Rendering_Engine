@@ -67,9 +67,9 @@ void LoadOBJ(const std::string& fileName, std::vector <Vertex>& vertices, std::v
 
     static int triangleCount = 0;
     float r,g,B;
-    r = 0.6f;
-    g = 0.5f;
-    B = 0.1f;
+    r = 0.1f;
+    g = 0.3f;
+    B = 1.0f;
     glm::vec3 faceColors[6] = {
     {1.0f, 0.0f, 0.0f}, // red
     {0.0f, 1.0f, 0.0f}, // green
