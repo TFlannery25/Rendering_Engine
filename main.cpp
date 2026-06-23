@@ -17,6 +17,8 @@
 #include "ShadowMap.h"
 #include <iostream>
 #include <vector>
+#include <memory>
+#include "Scene.h"
 
 SDL_Window* window;
 SDL_GLContext glContext;
@@ -135,24 +137,10 @@ void PreDraw()
 
 void Main_Loop()
 {   
-    std::vector<Vertex> vertices;
-    std::vector<GLuint> indices;
+    Scene scene;
+    scene.BuildScene();
 
-    LoadOBJ("./Cube.obj", vertices, indices);
-    
-    Mesh Cube(vertices, indices);
-    Transform transform;
-    transform.position = {0.0, 0.0, 0.0};
-    transform.scale = {5.0f, 5.0f, 1.0f};
-
-    Mesh CubeSmall(vertices, indices);
-    Transform transformSmall;
-    transformSmall.position = {0.0, 0.0, 5.0};
-    transformSmall.scale = {1.0f, 1.0f, 1.0f};
-    
-    Shader shader("./shaders/Vertex.glsl", "./shaders/Fragment.glsl");
-    Shader depthShader("./shaders/Depth_Vert.glsl", "./shaders/Depth_Frag.glsl");
-
+    std::shared_ptr<Shader> depthShader = std::make_shared<Shader>("./shaders/Depth_Vert.glsl", "./shaders/Depth_Frag.glsl");
     ShadowMap shadowMap;
 
     Camera camera(
@@ -164,26 +152,7 @@ void Main_Loop()
         0.1f, //near plane
         100.0f //far plane
     );
-    Light light(
-        glm::vec3(1.0f, 0.0f, 15.0f), //position
-        glm::vec3(1.0f, 1.0f, 1.0f), //color
-        2.0f //intensity
-    );
-
-    Transform lightTrans;
-    lightTrans.position = light.position;
-    lightTrans.scale = {0.2f, 0.2f, 0.2f};
-    Object lightObj(lightTrans, Cube, shader);
-
-    Object cube(transform, Cube, shader);
-    Object cubeSmall(transformSmall, CubeSmall, shader);
-
-    //Mesh Cube2(vertices, indices);
-    //Transform transform2;
-    //transform2.position = {1.0f, 0.0f, 9.0f};
-
-    //Object cube2(transform2, Cube2, shader);
-
+    
     bool quit  = false;
     bool w     = false;
     bool s     = false;
@@ -211,11 +180,11 @@ void Main_Loop()
         if(up)   camera.MoveUp(      CAMERA_SPEED);
         if(down) camera.MoveUp(     -CAMERA_SPEED);
 
-        cubeSmall.transform.rotation.z += 0.01f;
+        //monkey.transform.rotation.z += 0.01f;
 
         //Shadow map stuff
         glm::mat4 lightView = glm::lookAt(
-        light.position,           // light's position
+        scene.lights.position,           // light's position
         glm::vec3(0.0f),          // looking at the origin (where your cube is)
         glm::vec3(0.0f, 1.0f, 0.0f) // up vector
         );
@@ -230,16 +199,17 @@ void Main_Loop()
         glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
         shadowMap.Bind();
-        cube.DrawDepth(depthShader, lightSpaceMatrix);
-        cubeSmall.DrawDepth(depthShader, lightSpaceMatrix);
-        //cube2.DrawDepth(depthShader, lightSpaceMatrix);
-        shadowMap.Unbind(SCREEN_WIDTH, SCREEN_HEIGHT);
 
+        scene.DrawDepth(depthShader, lightSpaceMatrix);
+       
+        
+        shadowMap.Unbind(SCREEN_WIDTH, SCREEN_HEIGHT);
+        
         PreDraw();
 
-        cube.Draw(camera, light, shadowMap.GetTexture(), lightSpaceMatrix);
-        cubeSmall.Draw(camera, light, shadowMap.GetTexture(), lightSpaceMatrix);
-        //cube2.Draw(camera, light, shadowMap.GetTexture(), lightSpaceMatrix);
+        scene.Draw(camera, shadowMap.GetTexture(), lightSpaceMatrix);
+        
+        
 
         SDL_GL_SwapWindow(window);
     }

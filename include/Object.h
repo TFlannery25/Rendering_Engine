@@ -8,18 +8,19 @@
 #include "Shader.h"
 #include "Camera.h"
 #include "Light.h"
+#include <memory>
 
 class Object
 {
     public:
     Transform transform;
-    Mesh mesh;
-    Shader shader;
+    std::shared_ptr<Mesh> mesh;
+    std::shared_ptr<Shader> shader;
 
-    Object(Transform &t, Mesh &m, Shader &s) : transform(t), mesh(m), shader(s) {}
+    Object(Transform &t, std::shared_ptr<Mesh> m, std::shared_ptr<Shader> s) : transform(t), mesh(m), shader(s) {}
 
     void Draw(const Camera& camera, const Light& light, GLuint shadowMap, const glm::mat4& lightSpaceMatrix);
-    void DrawDepth(Shader& depthShader, const glm::mat4& lightSpaceMatrix);
+    void DrawDepth(std::shared_ptr<Shader> depthShader, const glm::mat4& lightSpaceMatrix);
 
 };
 

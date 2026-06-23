@@ -1,5 +1,12 @@
 #include "Mesh.h" 
 
+struct Material
+{
+    std::string name;
+    glm::vec3 Kd;
+    glm::vec3 Ks;
+    float Ns;
+};
 //loads obj files, must be a triangle only mesh currently
 void LoadOBJ(const std::string& fileName, std::vector <Vertex>& vertices, std::vector<GLuint> &indices)
 {
@@ -16,6 +23,11 @@ void LoadOBJ(const std::string& fileName, std::vector <Vertex>& vertices, std::v
     std::string normals;
     std::string faces;
 
+    std::string mltFileName;
+
+    std::vector<std::string> faceMaterials;
+    std::string currentMtl = "default";
+
     while (std::getline(file, line))
     {
         if(line.substr(0, 2) == "v ")
@@ -29,10 +41,89 @@ void LoadOBJ(const std::string& fileName, std::vector <Vertex>& vertices, std::v
         else if(line.substr(0, 2) == "f ")
         {
             faces += line.substr(2) + '\n';
+            faceMaterials.push_back(currentMtl);
+        }
+        else if(line.substr(0, 7) == "usemtl ")
+        {
+            currentMtl = line.substr(7);
+        }
+        else if(line.substr(0, 7) == "mtllib ")
+        {
+            mltFileName = line.substr(7);
         }
     }
 
     file.close();
+
+    std::ifstream mtlFile(mltFileName);
+
+    if (!mtlFile.is_open())
+    {
+        std::cout << "Failed to open file: " << mltFileName << std::endl;
+        return;
+    }
+    
+    std::map<std::string, Material> materials;
+    std::string mtlName; 
+    Material currentMaterial;
+
+    currentMaterial.name = "default";
+    currentMaterial.Kd = {0.8, 0.0, 0.8};
+    currentMaterial.Ks = {0.5, 0.5, 0.5};
+    currentMaterial.Ns = 32.0;
+    materials["default"] = currentMaterial;
+
+    while (std::getline(mtlFile, line))
+    {
+        if(line.substr(0, 7) == "newmtl ")
+        {
+            if(!mtlName.empty())           
+            {
+                materials[mtlName] = currentMaterial;
+            }
+            mtlName = line.substr(7);
+            currentMaterial = Material();
+            currentMaterial.name = mtlName;
+        }
+        else if(line.substr(0, 3) == "Kd ")
+        {
+            std::string junk;
+            float v1, v2, v3;
+            std::istringstream KdStream(line);
+            KdStream >> junk;
+            KdStream >> v1;
+            KdStream >> v2;
+            KdStream >> v3;
+            currentMaterial.Kd = {v1,v2,v3};
+        }
+        else if(line.substr(0, 3) == "Ks ")
+        {
+            std::string junk;
+            float v1, v2, v3;
+            std::istringstream KsStream(line);
+            KsStream >> junk;
+            KsStream >> v1;
+            KsStream >> v2;
+            KsStream >> v3;
+            currentMaterial.Ks = {v1,v2,v3};
+        }
+        else if(line.substr(0, 3) == "Ns ")
+        {
+            std::string junk;
+            float v;
+            std::istringstream NsStream(line);
+            NsStream >> junk;
+            NsStream >> v;
+            currentMaterial.Ns = v;
+        }
+    }
+
+    if(!mtlName.empty())
+    {
+        materials[mtlName] = currentMaterial;
+    }
+
+    mtlFile.close();
 
     std::istringstream PosStream(pos);
     std::istringstream NormalsStream(normals);
@@ -65,20 +156,8 @@ void LoadOBJ(const std::string& fileName, std::vector <Vertex>& vertices, std::v
     }
 
 
-    static int triangleCount = 0;
-    float r,g,B;
-    r = 0.1f;
-    g = 0.3f;
-    B = 1.0f;
-    glm::vec3 faceColors[6] = {
-    {1.0f, 0.0f, 0.0f}, // red
-    {0.0f, 1.0f, 0.0f}, // green
-    {0.0f, 0.0f, 1.0f}, // blue
-    {1.0f, 1.0f, 0.0f}, // yellow
-    {1.0f, 0.0f, 1.0f}, // magenta
-    {0.0f, 1.0f, 1.0f}  // cyan
-};
-
+    int triangleCount = 0;
+    
     //change to line based parsing later if allowing quads or optimization long term
     GLuint p1, p2, p3, n1, n2, n3;
     std::string sub1, sub2;
@@ -104,13 +183,15 @@ void LoadOBJ(const std::string& fileName, std::vector <Vertex>& vertices, std::v
 
         int faceIndex = triangleCount / 2; // 2 triangles per face
         //glm::vec3 col = faceColors[faceIndex % 6];
-        glm::vec3 col = {r, g, B};
+        glm::vec3 col = materials[faceMaterials[triangleCount]].Kd;
+        glm::vec3 specColor = materials[faceMaterials[triangleCount]].Ks;
+        float shininess = materials[faceMaterials[triangleCount]].Ns;
         
 
         // Create vertices
-        vertices.emplace_back(positions[p1], norms[n1], col);
-        vertices.emplace_back(positions[p2], norms[n2], col);
-        vertices.emplace_back(positions[p3], norms[n3], col);
+        vertices.emplace_back(positions[p1], norms[n1], col, specColor, shininess);
+        vertices.emplace_back(positions[p2], norms[n2], col, specColor, shininess);
+        vertices.emplace_back(positions[p3], norms[n3], col, specColor, shininess);
 
         // Create indices pointing to those vertices
         indices.push_back(vertices.size() - 3);
@@ -169,6 +250,11 @@ Mesh::Mesh(std::vector<Vertex> &vertices, std::vector<GLuint> &indices)
         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
         glEnableVertexAttribArray(2);
 
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, specColor));
+        glEnableVertexAttribArray(3);
+
+        glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, shininess));
+        glEnableVertexAttribArray(4);
         
         //unbinds 
         glBindBuffer(GL_ARRAY_BUFFER, 0); 
