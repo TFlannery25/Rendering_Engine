@@ -8,18 +8,23 @@ This project uses the MinGW-w64 toolchain via MSYS2 for compilation on Windows. 
 
 ### 1. Install MSYS2
 
-Download and install MSYS2 from [msys2.org](https://www.msys2.org). When choosing an install path, use the default `C:\msys64` — the project's VS Code configuration files reference this path directly and will work without modification if you use it.
+Download and install MSYS2 from [msys2.org](https://www.msys2.org). When choosing an install path, use the default `C:\msys64`, the project's VS Code configuration files reference this path directly and will work without modification if you use it.
 
 ### 2. Open the correct terminal
 
-After installation, open **MSYS2 MinGW x64** from the Start menu. This is important — do not use the "MSYS2 MSYS" or "MSYS2 UCRT64" variants, as those use different compiler environments that won't match the project's configuration.
+After installation, open **MSYS2 MinGW x64** from the Start menu. This is important, do not use the "MSYS2 MSYS" or "MSYS2 UCRT64" variants as those use different compiler environments that won't match the project's configuration.
 
 ### 3. Update the package database
 
-Run the following command. You may be prompted to close and reopen the terminal partway through — do so, then run it again:
+Run the following command. You may be prompted to close and reopen the terminal partway through: 
 
 ```bash
 pacman -Syu
+```
+
+Do so, then run:
+
+```bash
 pacman -Su
 ```
 
@@ -35,6 +40,14 @@ When prompted, install all members of the toolchain. This provides `g++`, `gcc`,
 
 ```bash
 pacman -S mingw-w64-x86_64-SDL2
+```
+
+Optional: 
+
+```bash
+pacman -S mingw-w64-x86_64-SDL2_image
+pacman -S mingw-w64-x86_64-SDL2_mixer
+pacman -S mingw-w64-x86_64-SDL2_ttf
 ```
 
 ### 6. Install GLM
@@ -75,6 +88,5 @@ To run after building:
 
 ## Notes
 
-- The `.vscode` configuration files (`c_cpp_properties.json`, `launch.json`) reference `C:/msys64/mingw64/...` directly. As long as MSYS2 is installed at the default `C:\msys64` path, these require no modification on a new machine.
 - GLAD is included in the project source (`src/glad.c`, `include/glad/`) and requires no separate installation.
 - OpenGL (`-lopengl32`) is provided by Windows itself and requires no separate installation.
