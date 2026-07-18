@@ -63,7 +63,7 @@ void LoadOBJ(const std::string& fileName, std::vector <Vertex>& vertices, std::v
         return;
     }
     
-    std::map<std::string, Material> materials;
+    std::unordered_map<std::string, Material> materials;
     std::string mtlName; 
     Material currentMaterial;
 

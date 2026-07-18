@@ -71,7 +71,7 @@ void Initialize_Program()
     
 }
 
-const float CAMERA_SPEED     = 0.05f;
+const float CAMERA_SPEED     = 1.0f;
 const float MOUSE_SENSITIVITY = 0.1f;  // degrees per pixel
 
 void Input(bool &quit, bool &w, bool &s, bool &a, bool &d,
@@ -138,7 +138,7 @@ void PreDraw()
 void Main_Loop()
 {   
     Scene scene;
-    scene.BuildScene();
+    scene.BuildScene("scenes/main_scene.json");
 
     std::shared_ptr<Shader> depthShader = std::make_shared<Shader>("./shaders/Depth_Vert.glsl", "./shaders/Depth_Frag.glsl");
     ShadowMap shadowMap;
@@ -164,8 +164,14 @@ void Main_Loop()
     float mouseDY    = 0.0f;
     bool mouseCapture = false;
 
+    Uint32 lastTime = SDL_GetTicks();
+
     while(!quit)
     {
+        Uint32 currentTime = SDL_GetTicks();
+        float deltaTime = (currentTime - lastTime) / 1000.0f;  // ms -> seconds
+        lastTime = currentTime;
+
         Input(quit, w, s, a, d, up, down, mouseDX, mouseDY, mouseCapture);
 
         // Camera look
@@ -173,12 +179,12 @@ void Main_Loop()
             camera.Rotate(mouseDX, mouseDY);
 
         // Camera movement
-        if(w)    camera.MoveForward( CAMERA_SPEED);
-        if(s)    camera.MoveForward(-CAMERA_SPEED);
-        if(a)    camera.MoveRight(  -CAMERA_SPEED);
-        if(d)    camera.MoveRight(   CAMERA_SPEED);
-        if(up)   camera.MoveUp(      CAMERA_SPEED);
-        if(down) camera.MoveUp(     -CAMERA_SPEED);
+        if(w)    camera.MoveForward( CAMERA_SPEED* deltaTime);
+        if(s)    camera.MoveForward(-CAMERA_SPEED* deltaTime);
+        if(a)    camera.MoveRight(  -CAMERA_SPEED* deltaTime);
+        if(d)    camera.MoveRight(   CAMERA_SPEED* deltaTime);
+        if(up)   camera.MoveUp(      CAMERA_SPEED* deltaTime);
+        if(down) camera.MoveUp(     -CAMERA_SPEED* deltaTime);
 
         //monkey.transform.rotation.z += 0.01f;
 
@@ -206,6 +212,8 @@ void Main_Loop()
         shadowMap.Unbind(SCREEN_WIDTH, SCREEN_HEIGHT);
         
         PreDraw();
+
+        scene.UpdateScene(deltaTime);
 
         scene.Draw(camera, shadowMap.GetTexture(), lightSpaceMatrix);
         

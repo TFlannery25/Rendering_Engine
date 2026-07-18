@@ -1,0 +1,33 @@
+{
+  "shader": {
+    "vertex": "./shaders/Vertex.glsl",
+    "fragment": "./shaders/Fragment.glsl"
+  },
+  "objects": [
+    {
+      "mesh": "./Cube.obj",
+      "position": [0.0, 0.0, 0.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "scale": [5.0, 5.0, 1.0]
+    },
+    {
+      "mesh": "./ShinyMonkey.obj",
+      "position": [0.0, 0.0, 5.0],
+      "rotation": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0],
+      "components": [
+        {
+          "type": "RotateComponent",
+          "speed": [0.0, 1.0, 0.0]
+        }
+      ]
+    }
+  ],
+  "lights": [
+    {
+      "position": [1.0, 0.0, 15.0],
+      "color": [1.0, 1.0, 1.0],
+      "intensity": 1.0
+    }
+  ]
+}

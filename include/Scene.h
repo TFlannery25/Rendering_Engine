@@ -10,6 +10,12 @@
 #include "Light.h"
 #include "Object.h"
 #include <memory>
+#include "Component.h"
+#include "Components/all_components.h"
+#include <unordered_map>
+#include "json.hpp"
+#include <fstream>
+using json = nlohmann::json;
 
 class Scene
 {
@@ -19,7 +25,8 @@ class Scene
 
         Scene() {}
 
-        void BuildScene();
+        void BuildScene(const std::string& sceneFile);
+        void UpdateScene(float deltaTime);
 
         void Draw(const Camera& camera, GLuint shadowMap, const glm::mat4& lightSpaceMatrix);
         void DrawDepth(std::shared_ptr<Shader> depthShader, const glm::mat4& lightSpaceMatrix);

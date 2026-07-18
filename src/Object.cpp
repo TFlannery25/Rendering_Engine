@@ -50,3 +50,9 @@ void Object::DrawDepth(std::shared_ptr<Shader> depthShader, const glm::mat4& lig
     mesh->Draw();
     depthShader->Unuse();
 }
+
+void Object::Update(float deltaTime)
+{
+    for(auto& comp : components)
+        comp->Update(*this, deltaTime);
+}
