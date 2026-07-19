@@ -19,6 +19,7 @@
 #include <vector>
 #include <memory>
 #include "Scene.h"
+#include "InputController.h"
 
 SDL_Window* window;
 SDL_GLContext glContext;
@@ -72,61 +73,8 @@ void Initialize_Program()
 }
 
 const float CAMERA_SPEED     = 1.0f;
-const float MOUSE_SENSITIVITY = 0.1f;  // degrees per pixel
 
-void Input(bool &quit, bool &w, bool &s, bool &a, bool &d,
-           bool &up, bool &down, float &mouseDX, float &mouseDY,
-           bool &mouseCapture)
-{
-    mouseDX = 0.0f;
-    mouseDY = 0.0f;
 
-    SDL_Event e;
-    while(SDL_PollEvent(&e))
-    {
-        if(e.type == SDL_QUIT)
-        {
-            quit = true;
-        }
-
-        // Left-click captures the mouse; Escape releases it
-        if(e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT)
-        {
-            mouseCapture = true;
-            SDL_SetRelativeMouseMode(SDL_TRUE);
-        }
-        if(e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)
-        {
-            mouseCapture = false;
-            SDL_SetRelativeMouseMode(SDL_FALSE);
-        }
-
-        if(e.type == SDL_MOUSEMOTION && mouseCapture)
-        {
-            mouseDX += e.motion.xrel * MOUSE_SENSITIVITY;
-            mouseDY -= e.motion.yrel * MOUSE_SENSITIVITY; // invert Y: up = positive pitch
-        }
-
-        if(e.type == SDL_KEYDOWN)
-        {
-            if(e.key.keysym.sym == SDLK_w) w    = true;
-            if(e.key.keysym.sym == SDLK_s) s    = true;
-            if(e.key.keysym.sym == SDLK_a) a    = true;
-            if(e.key.keysym.sym == SDLK_d) d    = true;
-            if(e.key.keysym.sym == SDLK_q) up   = true;
-            if(e.key.keysym.sym == SDLK_e) down = true;
-        }
-        if(e.type == SDL_KEYUP)
-        {
-            if(e.key.keysym.sym == SDLK_w) w    = false;
-            if(e.key.keysym.sym == SDLK_s) s    = false;
-            if(e.key.keysym.sym == SDLK_a) a    = false;
-            if(e.key.keysym.sym == SDLK_d) d    = false;
-            if(e.key.keysym.sym == SDLK_q) up   = false;
-            if(e.key.keysym.sym == SDLK_e) down = false;
-        }
-    }
-}
 void PreDraw()
 {
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -139,6 +87,9 @@ void Main_Loop()
 {   
     Scene scene;
     scene.BuildScene("scenes/main_scene.json");
+
+    InputController inputController;
+    SDL_SetRelativeMouseMode(SDL_TRUE);
 
     std::shared_ptr<Shader> depthShader = std::make_shared<Shader>("./shaders/Depth_Vert.glsl", "./shaders/Depth_Frag.glsl");
     ShadowMap shadowMap;
@@ -153,38 +104,31 @@ void Main_Loop()
         100.0f //far plane
     );
     
-    bool quit  = false;
-    bool w     = false;
-    bool s     = false;
-    bool a     = false;
-    bool d     = false;
-    bool up    = false;
-    bool down  = false;
-    float mouseDX    = 0.0f;
-    float mouseDY    = 0.0f;
-    bool mouseCapture = false;
 
     Uint32 lastTime = SDL_GetTicks();
 
-    while(!quit)
+    while(!inputController.WantsQuit() && !inputController.IsPressed(SDL_SCANCODE_ESCAPE))
     {
         Uint32 currentTime = SDL_GetTicks();
         float deltaTime = (currentTime - lastTime) / 1000.0f;  // ms -> seconds
         lastTime = currentTime;
 
-        Input(quit, w, s, a, d, up, down, mouseDX, mouseDY, mouseCapture);
+        inputController.ReadInputs();
 
-        // Camera look
+       // Camera look
+        float mouseDX = inputController.GetMouseDeltaX();
+        float mouseDY = inputController.GetMouseDeltaY();
         if(mouseDX != 0.0f || mouseDY != 0.0f)
             camera.Rotate(mouseDX, mouseDY);
+       
 
         // Camera movement
-        if(w)    camera.MoveForward( CAMERA_SPEED* deltaTime);
-        if(s)    camera.MoveForward(-CAMERA_SPEED* deltaTime);
-        if(a)    camera.MoveRight(  -CAMERA_SPEED* deltaTime);
-        if(d)    camera.MoveRight(   CAMERA_SPEED* deltaTime);
-        if(up)   camera.MoveUp(      CAMERA_SPEED* deltaTime);
-        if(down) camera.MoveUp(     -CAMERA_SPEED* deltaTime);
+        if(inputController.IsHeld(SDL_SCANCODE_W))    camera.MoveForward( CAMERA_SPEED* deltaTime);
+        if(inputController.IsHeld(SDL_SCANCODE_S))    camera.MoveForward(-CAMERA_SPEED* deltaTime);
+        if(inputController.IsHeld(SDL_SCANCODE_A))    camera.MoveRight(  -CAMERA_SPEED* deltaTime);
+        if(inputController.IsHeld(SDL_SCANCODE_D))    camera.MoveRight(   CAMERA_SPEED* deltaTime);
+        if(inputController.IsHeld(SDL_SCANCODE_Q))   camera.MoveUp(      CAMERA_SPEED* deltaTime);
+        if(inputController.IsHeld(SDL_SCANCODE_E)) camera.MoveUp(     -CAMERA_SPEED* deltaTime);
 
         //monkey.transform.rotation.z += 0.01f;
 
