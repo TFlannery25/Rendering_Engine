@@ -10,6 +10,7 @@
 #include "Light.h"
 #include <memory>
 #include "Component.h"
+#include "UpdateContext.h"
 
 class Object
 {
@@ -21,7 +22,7 @@ class Object
 
     Object(Transform &t, std::shared_ptr<Mesh> m, std::shared_ptr<Shader> s) : transform(t), mesh(m), shader(s) {}
 
-    void Update(float deltaTime);
+    void Update(const UpdateContext& updateContext);
     void Draw(const Camera& camera, const Light& light, GLuint shadowMap, const glm::mat4& lightSpaceMatrix);
     void DrawDepth(std::shared_ptr<Shader> depthShader, const glm::mat4& lightSpaceMatrix);
 

@@ -20,6 +20,7 @@
 #include <memory>
 #include "Scene.h"
 #include "InputController.h"
+#include "include/UpdateContext.h"
 
 SDL_Window* window;
 SDL_GLContext glContext;
@@ -91,6 +92,8 @@ void Main_Loop()
     InputController inputController;
     SDL_SetRelativeMouseMode(SDL_TRUE);
 
+    UpdateContext updateContext{0.0f, inputController};
+
     std::shared_ptr<Shader> depthShader = std::make_shared<Shader>("./shaders/Depth_Vert.glsl", "./shaders/Depth_Frag.glsl");
     ShadowMap shadowMap;
 
@@ -112,6 +115,7 @@ void Main_Loop()
         Uint32 currentTime = SDL_GetTicks();
         float deltaTime = (currentTime - lastTime) / 1000.0f;  // ms -> seconds
         lastTime = currentTime;
+        updateContext.deltaTime = deltaTime;
 
         inputController.ReadInputs();
 
@@ -157,7 +161,7 @@ void Main_Loop()
         
         PreDraw();
 
-        scene.UpdateScene(deltaTime);
+        scene.UpdateScene(updateContext);
 
         scene.Draw(camera, shadowMap.GetTexture(), lightSpaceMatrix);
         
