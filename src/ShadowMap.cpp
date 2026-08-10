@@ -30,6 +30,30 @@ ShadowMap::~ShadowMap()
     glDeleteTextures(1, &depthTexture);
 }
 
+ShadowMap::ShadowMap(ShadowMap&& other) noexcept
+    : FBO(other.FBO), depthTexture(other.depthTexture)
+{
+    other.FBO = 0;
+    other.depthTexture = 0;
+}
+
+ShadowMap& ShadowMap::operator=(ShadowMap&& other) noexcept
+{
+    if (this != &other)
+    {
+        // Free whatever this object currently owns before taking over other's handles
+        glDeleteFramebuffers(1, &FBO);
+        glDeleteTextures(1, &depthTexture);
+
+        FBO = other.FBO;
+        depthTexture = other.depthTexture;
+
+        other.FBO = 0;
+        other.depthTexture = 0;
+    }
+    return *this;
+}
+
 void ShadowMap::Bind()
 {
     glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
@@ -43,7 +67,7 @@ void ShadowMap::Unbind(int SCREEN_WIDTH, int SCREEN_HEIGHT)
     glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
-GLuint ShadowMap::GetTexture()
+GLuint ShadowMap::GetTexture() const
 {
     return depthTexture;
 }

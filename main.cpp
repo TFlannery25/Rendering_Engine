@@ -95,7 +95,6 @@ void Main_Loop()
     UpdateContext updateContext{0.0f, inputController};
 
     std::shared_ptr<Shader> depthShader = std::make_shared<Shader>("./shaders/Depth_Vert.glsl", "./shaders/Depth_Frag.glsl");
-    ShadowMap shadowMap;
 
     Camera camera(
         glm::vec3(0.0f, 0.0f, 10.0f), //position
@@ -134,36 +133,14 @@ void Main_Loop()
         if(inputController.IsHeld(SDL_SCANCODE_Q))   camera.MoveUp(      CAMERA_SPEED* deltaTime);
         if(inputController.IsHeld(SDL_SCANCODE_E)) camera.MoveUp(     -CAMERA_SPEED* deltaTime);
 
-        //monkey.transform.rotation.z += 0.01f;
 
-        //Shadow map stuff
-        glm::mat4 lightView = glm::lookAt(
-        scene.lights.position,           // light's position
-        glm::vec3(0.0f),          // looking at the origin (where your cube is)
-        glm::vec3(0.0f, 1.0f, 0.0f) // up vector
-        );
-
-        glm::mat4 lightProjection = glm::perspective(
-        glm::radians(90.0f),  // fov — wide enough to cover the scene
-        1.0f,                 // aspect ratio — 1:1 since shadow map is square
-        1.0f,                 // near plane
-        100.0f                // far plane, match your camera's
-        );  
-
-        glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-
-        shadowMap.Bind();
-
-        scene.DrawDepth(depthShader, lightSpaceMatrix);
-       
-        
-        shadowMap.Unbind(SCREEN_WIDTH, SCREEN_HEIGHT);
-        
+        scene.DrawDepth(depthShader, SCREEN_WIDTH, SCREEN_HEIGHT);
+          
         PreDraw();
 
         scene.UpdateScene(updateContext);
 
-        scene.Draw(camera, shadowMap.GetTexture(), lightSpaceMatrix);
+        scene.Draw(camera);
         
         
 

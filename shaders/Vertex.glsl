@@ -9,14 +9,12 @@ layout (location = 4) in float shininess;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 perspective;
-uniform mat4 lightSpaceMatrix;
 
 out vec3 FragPos;
 out vec3 Normal;
 out vec3 vColor;
 out vec3 vSpecColor;
 out float vShininess;
-out vec4 FragPosLightSpace;
 
 void main()
 {
@@ -27,8 +25,4 @@ void main()
     vColor = aColor;
     vSpecColor = specColor;
     vShininess = shininess;
-
-    FragPosLightSpace = lightSpaceMatrix * vec4(FragPos, 1.0);
 }
-
-

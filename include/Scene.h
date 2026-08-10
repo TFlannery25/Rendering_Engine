@@ -16,6 +16,7 @@
 #include "json.hpp"
 #include <fstream>
 #include "UpdateContext.h"
+#include "ShadowLight.h"
 
 using json = nlohmann::json;
 using ComponentFactory = std::function<std::unique_ptr<Component>(const json&)>;
@@ -25,10 +26,13 @@ class Scene
 {
     private:
         std::unordered_map<std::string, ComponentFactory> componentFactories;
+        const int MAX_SHADOW_LIGHTS = 4;
 
     public:
         std::vector<Object> objects;
-        Light lights; // std::vector<Light> for multiple lights later
+        //Light lights; // std::vector<Light> for multiple lights later
+        std::vector<Light> illuminationLights;
+        std::vector<ShadowLight> shadowLights;
 
         Scene() {BuildComponentFactories();}
 
@@ -37,8 +41,8 @@ class Scene
         void BuildScene(const std::string& sceneFile);
         void UpdateScene(const UpdateContext& updateContext);
 
-        void Draw(const Camera& camera, GLuint shadowMap, const glm::mat4& lightSpaceMatrix);
-        void DrawDepth(std::shared_ptr<Shader> depthShader, const glm::mat4& lightSpaceMatrix);
+        void Draw(const Camera& camera);
+        void DrawDepth(std::shared_ptr<Shader> depthShader, int SCREEN_WIDTH, int SCREEN_HEIGHT);
 };
 
 #endif

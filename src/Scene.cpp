@@ -1,5 +1,16 @@
 #include "Scene.h"
 
+// Builds the component factory by populating the componentFactories map with lambdas that create components from JSON data.
+// When making components, add a corresponding entry in the componentFactories map so that the scene can create them from JSON data.
+void Scene::BuildComponentFactories()
+{
+    componentFactories["RotateComponent"] = [](const json& componentData) -> std::unique_ptr<Component>
+    {
+    glm::vec3 speed(componentData["speed"][0], componentData["speed"][1], componentData["speed"][2]);
+    return std::make_unique<RotateComponent>(speed);
+    };
+}
+
 void Scene::BuildScene(const std::string& sceneFile)
 {
     std::ifstream f(sceneFile);
@@ -23,6 +34,7 @@ void Scene::BuildScene(const std::string& sceneFile)
 
         Transform t;
         t.position = glm::vec3(objData["position"][0], objData["position"][1], objData["position"][2]);
+        t.rotation = glm::vec3(objData["rotation"][0], objData["rotation"][1], objData["rotation"][2]);
         t.scale    = glm::vec3(objData["scale"][0], objData["scale"][1], objData["scale"][2]);
 
         Object newObject(t, meshCache[meshPath], shader);
@@ -32,10 +44,9 @@ void Scene::BuildScene(const std::string& sceneFile)
             for (auto& componentData : objData["components"])
             {
                 std::string type = componentData["type"];
-                if (type == "RotateComponent")
+                if (componentFactories.contains(type))
                 {
-                    glm::vec3 speed(componentData["speed"][0], componentData["speed"][1], componentData["speed"][2]);
-                    newObject.components.push_back(std::make_unique<RotateComponent>(speed));
+                    newObject.components.push_back(componentFactories[type](componentData));
                 }
             }
         }
@@ -44,77 +55,58 @@ void Scene::BuildScene(const std::string& sceneFile)
     }
 
 
-    lights = Light(
-    glm::vec3(data["lights"][0]["position"][0], data["lights"][0]["position"][1], data["lights"][0]["position"][2]),
-    glm::vec3(data["lights"][0]["color"][0], data["lights"][0]["color"][1], data["lights"][0]["color"][2]),
-    data["lights"][0]["intensity"]
-    );
+    for (auto& objData : data["shadowLights"])
+    {
+        if ((int)shadowLights.size() >= MAX_SHADOW_LIGHTS)
+        {
+            std::cout << "Warning: exceeded max shadow lights (" << MAX_SHADOW_LIGHTS << "), ignoring extra entries." << std::endl;
+            break;
+        }
+        shadowLights.emplace_back(
+            glm::vec3(objData["position"][0], objData["position"][1], objData["position"][2]),
+            glm::vec3(objData["color"][0], objData["color"][1], objData["color"][2]),
+            objData["intensity"]
+        );
+    }
 
-}
- /*
-void Scene::BuildScene()
-{
-    
+    for (auto& objData : data["illuminationLights"])
+    {
+        Light light;
+        light.position = glm::vec3(objData["position"][0], objData["position"][1], objData["position"][2]);
+        light.color = glm::vec3(objData["color"][0], objData["color"][1], objData["color"][2]);
+        light.intensity = objData["intensity"];
+        illuminationLights.push_back(light);
+    }
+
    
-    std::vector<Vertex> CubeVertices;
-    std::vector<GLuint> CubeIndices;
-    std::vector<Vertex> MonkeyVertices;
-    std::vector<GLuint> MonkeyIndices;
-
-    LoadOBJ("./Cube.obj", CubeVertices, CubeIndices);
-    LoadOBJ("./ShinyMonkey.obj", MonkeyVertices, MonkeyIndices);
-
-    std::shared_ptr<Mesh> cubeMesh = std::make_shared<Mesh>(CubeVertices, CubeIndices);
-    Transform CubeTransform;
-    CubeTransform.position = {0.0, 0.0, 0.0};
-    CubeTransform.scale = {5.0f, 5.0f, 1.0f};
-
-    std::shared_ptr<Mesh> monkeyMesh = std::make_shared<Mesh>(MonkeyVertices, MonkeyIndices);
-    Transform monkeyTransform;
-    monkeyTransform.position = {0.0, 0.0, 5.0};
-    monkeyTransform.scale = {1.0f, 1.0f, 1.0f};
-
-    Light light(
-        glm::vec3(1.0f, 0.0f, 15.0f), //position
-        glm::vec3(1.0f, 1.0f, 1.0f), //color
-        1.0f //intensity
-    );
-
-    Transform lightTrans;
-    lightTrans.position = light.position;
-    lightTrans.scale = {0.2f, 0.2f, 0.2f};
-
-    std::shared_ptr<Shader> shader = std::make_shared<Shader>("./shaders/Vertex.glsl", "./shaders/Fragment.glsl");
-
-    objects.emplace_back(lightTrans, cubeMesh, shader);
-    objects.emplace_back(CubeTransform, cubeMesh, shader);
-    objects.emplace_back(monkeyTransform, monkeyMesh, shader);
-
-    objects[2].components.push_back(std::make_shared<RotateComponent>(glm::vec3(0.0f, 1.0f, 0.0f)));
-
-    lights = light;
-    
 }
-*/
-void Scene::UpdateScene(float deltaTime)
+
+void Scene::UpdateScene(const UpdateContext& updateContext)
 {
     for(auto& obj : objects)
-        obj.Update(deltaTime);
+        obj.Update(updateContext);
 }
 
-void Scene::Draw(const Camera& camera, GLuint shadowMap, const glm::mat4& lightSpaceMatrix)
+void Scene::Draw(const Camera& camera)
 {
     for (auto& obj: objects)
     {
-        obj.Draw(camera, lights, shadowMap, lightSpaceMatrix);
+        obj.Draw(camera, illuminationLights, shadowLights);
     }
 }
 
-
-void Scene::DrawDepth(std::shared_ptr<Shader> depthShader, const glm::mat4& lightSpaceMatrix)
+void Scene::DrawDepth(std::shared_ptr<Shader> depthShader, int SCREEN_WIDTH, int SCREEN_HEIGHT)
 {
-    for (auto& obj: objects)
+
+    for (auto& shadowLight : shadowLights)
     {
-        obj.DrawDepth(depthShader, lightSpaceMatrix);
+        shadowLight.shadowMap.Bind();
+
+        for (auto& obj: objects)
+        {
+            obj.DrawDepth(depthShader, shadowLight.lightSpaceMatrix);
+        }
+
+        shadowLight.shadowMap.Unbind(SCREEN_WIDTH, SCREEN_HEIGHT);
     }
 }

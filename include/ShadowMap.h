@@ -16,9 +16,17 @@ class ShadowMap{
         ShadowMap();
         ~ShadowMap();
 
+        // Not copyable — copying would duplicate GL handles and cause a double-free
+        ShadowMap(const ShadowMap&) = delete;
+        ShadowMap& operator=(const ShadowMap&) = delete;
+
+        // Movable — transfers ownership of the GL handles
+        ShadowMap(ShadowMap&& other) noexcept;
+        ShadowMap& operator=(ShadowMap&& other) noexcept;
+
         void Bind();
         void Unbind(int SCREEN_WIDTH, int SCREEN_HEIGHT);
-        GLuint GetTexture();
+        GLuint GetTexture() const;
     
 };
 
