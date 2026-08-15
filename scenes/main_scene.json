@@ -7,19 +7,19 @@
     {
       "mesh": "./Cube.obj",
       "position": [-3.0, 0.0, 0.0],
-      "rotation": [0.0, 0.7854, 0.0],
+      "rotation": [0.0, 45.0, 0.0],
       "scale": [5.0, 5.0, 1.0]
     },
     {
       "mesh": "./Cube.obj",
       "position": [3.0, 0.0, 0.0],
-      "rotation": [0.0, 2.356, 0.0],
+      "rotation": [0.0, 135.0, 0.0],
       "scale": [5.0, 5.0, 1.0]
     },
     {
       "mesh": "./Cube.obj",
       "position": [0.0, -5.0, 3.0],
-      "rotation": [0.0, 0.7854, 0.0],
+      "rotation": [0.0, 45.0, 0.0],
       "scale": [5.0, 1.0, 5.0]
     },
     {

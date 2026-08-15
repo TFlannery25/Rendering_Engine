@@ -34,7 +34,7 @@ void Scene::BuildScene(const std::string& sceneFile)
 
         Transform t;
         t.position = glm::vec3(objData["position"][0], objData["position"][1], objData["position"][2]);
-        t.rotation = glm::vec3(objData["rotation"][0], objData["rotation"][1], objData["rotation"][2]);
+        t.rotation = glm::radians(glm::vec3(objData["rotation"][0], objData["rotation"][1], objData["rotation"][2]));
         t.scale    = glm::vec3(objData["scale"][0], objData["scale"][1], objData["scale"][2]);
 
         Object newObject(t, meshCache[meshPath], shader);
